@@ -18,6 +18,25 @@ async function main() {
   });
 
   console.log({ admin });
+
+  // Initial categories (upsert keeps re-runs idempotent)
+  const categorySeedData = [
+    'Panadería',
+    'Comida preparada',
+    'Frutas y verduras',
+    'Lácteos',
+    'Otros',
+  ];
+
+  for (const categoryName of categorySeedData) {
+    await prisma.category.upsert({
+      where: { name: categoryName },
+      update: {},
+      create: { name: categoryName },
+    });
+  }
+
+  console.log(`Seeded ${categorySeedData.length} categories`);
 }
 
 main()
