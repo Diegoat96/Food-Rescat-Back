@@ -21,11 +21,11 @@ async function main() {
 
   // Initial categories (upsert keeps re-runs idempotent)
   const categorySeedData = [
-    'Panadería',
-    'Comida preparada',
-    'Frutas y verduras',
-    'Lácteos',
-    'Otros',
+    'Bakery',
+    'Prepared food',
+    'Fruits and vegetables',
+    'Dairy',
+    'Other',
   ];
 
   for (const categoryName of categorySeedData) {

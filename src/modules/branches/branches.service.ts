@@ -13,6 +13,7 @@ export class BranchesService {
       data: {
         name: dto.name,
         address: dto.address,
+        city: dto.city,
         phone: dto.phone,
         openingHours: dto.openingHours,
         businessId,
