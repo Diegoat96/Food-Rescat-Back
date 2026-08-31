@@ -12,6 +12,11 @@ export class CreateBranchDto {
   @IsString()
   address!: string;
 
+  @ApiPropertyOptional({ example: 'Guatemala' })
+  @IsOptional()
+  @IsString()
+  city?: string;
+
   @ApiPropertyOptional({ example: '+502 5555 5555' })
   @IsOptional()
   @IsString()
