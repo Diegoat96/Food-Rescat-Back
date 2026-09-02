@@ -6,6 +6,9 @@ import { AuthModule } from './modules/auth/auth.module';
 import { BranchesModule } from './modules/branches/branches.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { PackagesModule } from './modules/packages/packages.module';
+import { ReservationsModule } from './modules/reservations/reservations.module';
+import { BusinessesModule } from './modules/businesses/businesses.module';
+import { SchedulerModule } from './modules/scheduler/scheduler.module';
 
 @Module({
   imports: [
@@ -16,6 +19,9 @@ import { PackagesModule } from './modules/packages/packages.module';
     BranchesModule,
     CategoriesModule,
     PackagesModule,
+    ReservationsModule,
+    BusinessesModule,
+    SchedulerModule,
   ],
 })
 export class AppModule {}

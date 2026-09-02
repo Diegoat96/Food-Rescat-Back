@@ -21,18 +21,51 @@ enum PackageStatus {
   CANCELLED
 }
 
-model User {
-  id           String    @id @default(uuid())
-  name         String
-  email        String    @unique
-  passwordHash String
-  role         UserRole  @default(CLIENT)
-  phone        String?
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+enum ReservationStatus {
+  PENDING
+  COMPLETED
+  CANCELED
+  EXPIRED
+}
 
-  branches Branch[]
+enum PaymentMethod {
+  CASH
+  CARD
+  OTHER
+}
+
+model Reservation {
+  id               String            @id @default(uuid())
+  verificationCode String            @unique
+  status           ReservationStatus @default(PENDING)
+  paymentMethod    PaymentMethod
+  clientId         String
+  packageId        String
+  branchId         String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  client  User        @relation(fields: [clientId], references: [id])
+  package FoodPackage @relation(fields: [packageId], references: [id])
+  branch  Branch      @relation(fields: [branchId], references: [id])
+
+  @@index([branchId, status])
+  @@map("reservations")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(CLIENT)
+  phone        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  branches     Branch[]
+  reservations Reservation[]
 
   @@map("users")
 }
@@ -49,8 +82,9 @@ model Branch {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  business  User          @relation(fields: [businessId], references: [id])
+  business     User          @relation(fields: [businessId], references: [id])
   foodPackages FoodPackage[]
+  reservations Reservation[]
 
   // Compound unique lets every query include ownership (id + businessId), so a
   // foreign branch is "not found" (P2025 -> 404) instead of needing separate checks.
@@ -71,23 +105,25 @@ model Category {
 }
 
 model FoodPackage {
-  id                 String        @id @default(uuid())
-  name               String
-  description        String?
-  originalPrice      Decimal       @db.Decimal(10, 2)
-  discountedPrice    Decimal       @db.Decimal(10, 2)
-  estimatedWeightKg  Decimal       @db.Decimal(8, 2)
-  quantity           Int           @default(1)
-  pickupDeadline     DateTime
-  status             PackageStatus @default(AVAILABLE)
-  publishedAt        DateTime      @default(now())
-  branchId           String
-  categoryId         String
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  id                String        @id @default(uuid())
+  name              String
+  description       String?
+  originalPrice     Decimal       @db.Decimal(10, 2)
+  discountedPrice   Decimal       @db.Decimal(10, 2)
+  estimatedWeightKg Decimal       @db.Decimal(8, 2)
+  quantity          Int           @default(1)
+  pickupDeadline    DateTime
+  status            PackageStatus @default(AVAILABLE)
+  publishedAt       DateTime      @default(now())
+  branchId          String
+  categoryId        String
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   branch   Branch   @relation(fields: [branchId], references: [id])
   category Category @relation(fields: [categoryId], references: [id])
+
+  reservations Reservation[]
 
   @@index([branchId, status])
   @@index([categoryId, status])
