@@ -19,6 +19,7 @@ import { PackagesService } from './packages.service';
 import { CreatePackageDto } from './dto/create-package.dto';
 import { UpdatePackageDto } from './dto/update-package.dto';
 import { QueryPackagesDto } from './dto/query-packages.dto';
+import { ReservePackageDto } from './dto/reserve-package.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -57,6 +58,21 @@ export class PackagesController {
   @ApiResponse({ status: 404, description: 'Package not found' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.packagesService.findOne(id);
+  }
+
+  @Post(':id/reserve')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.CLIENT)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Reserve a package atomically (CLIENT)' })
+  @ApiResponse({ status: 201, description: 'Reservation created' })
+  @ApiResponse({ status: 409, description: 'Package is no longer available' })
+  reserve(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReservePackageDto,
+    @CurrentUser('id') clientId: string,
+  ) {
+    return this.packagesService.reserve(id, clientId, dto.paymentMethod);
   }
 
   @Patch(':id')
