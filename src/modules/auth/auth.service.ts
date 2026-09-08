@@ -8,6 +8,7 @@ import { UsersService, SafeUser } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { UserRole } from '../../common/enums/user-role.enum';
 import * as bcrypt from 'bcrypt';
 
 export interface LoginResponse {
@@ -30,13 +31,18 @@ export class AuthService {
     if (existing) {
       throw new ConflictException('Email already registered');
     }
-    return this.usersService.create(dto);
+    // Public registration is always CLIENT; never trust a client-provided role.
+    return this.usersService.create({ ...dto, role: UserRole.CLIENT });
   }
 
   async login(dto: LoginDto): Promise<LoginResponse> {
     const user = await this.usersService.findByEmailWithPassword(dto.email);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account suspended');
     }
 
     const isPasswordValid = await bcrypt.compare(

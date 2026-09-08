@@ -3,6 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import * as cron from 'node-cron';
 import { PackageStatus, ReservationStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+
+const EXPIRING_WINDOW_MINUTES = 30;
 
 interface ExpireResult {
   packages: number;
@@ -17,6 +20,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   onModuleInit(): void {
@@ -54,9 +58,56 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       }),
     ]);
 
+    await this.notifyExpiringReservations(now);
+
     this.logger.log(
       `Expired ${packages.count} packages and ${reservations.count} reservations`,
     );
     return { packages: packages.count, reservations: reservations.count };
+  }
+
+  private async notifyExpiringReservations(now: Date): Promise<void> {
+    const windowEnd = new Date(now.getTime() + EXPIRING_WINDOW_MINUTES * 60 * 1000);
+
+    const expiringReservations = await this.prisma.reservation.findMany({
+      where: {
+        status: ReservationStatus.PENDING,
+        notifiedExpiring: false,
+        package: {
+          pickupDeadline: { gt: now, lte: windowEnd },
+        },
+      },
+      include: {
+        package: { select: { name: true } },
+        branch: { select: { name: true } },
+        client: { select: { id: true } },
+      },
+    });
+
+    if (expiringReservations.length === 0) {
+      return;
+    }
+
+    const ids = expiringReservations.map((r) => r.id);
+
+    await this.prisma.reservation.updateMany({
+      where: { id: { in: ids } },
+      data: { notifiedExpiring: true },
+    });
+
+    await Promise.all(
+      expiringReservations.map((reservation) =>
+        this.notificationsService.createForUser({
+          userId: reservation.client.id,
+          type: 'PACKAGE_EXPIRING',
+          title: 'Package expiring soon',
+          message: `Your reserved package "${reservation.package.name}" at ${reservation.branch.name} expires in less than 30 minutes.`,
+        }),
+      ),
+    );
+
+    this.logger.log(
+      `Sent ${expiringReservations.length} expiring notifications`,
+    );
   }
 }

@@ -13,6 +13,12 @@ enum UserRole {
   ADMIN
 }
 
+enum BusinessRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum PackageStatus {
   AVAILABLE
   RESERVED
@@ -42,12 +48,14 @@ model Reservation {
   clientId         String
   packageId        String
   branchId         String
+  notifiedExpiring Boolean           @default(false)
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
-  client  User        @relation(fields: [clientId], references: [id])
-  package FoodPackage @relation(fields: [packageId], references: [id])
-  branch  Branch      @relation(fields: [branchId], references: [id])
+  client      User        @relation(fields: [clientId], references: [id])
+  package     FoodPackage @relation(fields: [packageId], references: [id])
+  branch      Branch      @relation(fields: [branchId], references: [id])
+  rating      Rating?
 
   @@index([branchId, status])
   @@map("reservations")
@@ -64,10 +72,37 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  branches     Branch[]
-  reservations Reservation[]
+  branches       Branch[]
+  reservations   Reservation[]
+  favorites      Favorite[]
+  ratings        Rating[]
+  notifications  Notification[]
+  businessRequests        BusinessRequest[]
+  reviewedBusinessRequests BusinessRequest[] @relation("BusinessRequestReviewer")
 
   @@map("users")
+}
+
+model BusinessRequest {
+  id                 String                @id @default(uuid())
+  userId             String
+  businessName       String
+  address            String
+  businessLicenseUrl String
+  photoUrl           String?
+  status             BusinessRequestStatus @default(PENDING)
+  reviewedBy         String?
+  reviewedAt         DateTime?
+  reason             String?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  user     User  @relation(fields: [userId], references: [id])
+  reviewer User? @relation("BusinessRequestReviewer", fields: [reviewedBy], references: [id])
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+  @@map("business_requests")
 }
 
 model Branch {
@@ -85,9 +120,12 @@ model Branch {
   business     User          @relation(fields: [businessId], references: [id])
   foodPackages FoodPackage[]
   reservations Reservation[]
+  favorites    Favorite[]
+  ratings      Rating[]
 
-  // Compound unique lets every query include ownership (id + businessId), so a
-  // foreign branch is "not found" (P2025 -> 404) instead of needing separate checks.
+  // Compound unique keeps ownership inside the unique key; the service fetches
+  // by id first so it can answer 403 (exists but owned by another business)
+  // vs 404 (does not exist).
   @@unique([id, businessId])
   @@index([businessId])
   @@map("branches")
@@ -128,4 +166,50 @@ model FoodPackage {
   @@index([branchId, status])
   @@index([categoryId, status])
   @@map("food_packages")
+}
+
+model Favorite {
+  id         String   @id @default(uuid())
+  customerId String
+  branchId   String
+  createdAt  DateTime @default(now())
+
+  client User   @relation(fields: [customerId], references: [id])
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@unique([customerId, branchId])
+  @@index([customerId])
+  @@map("favorites")
+}
+
+model Rating {
+  id            String  @id @default(uuid())
+  score         Int
+  comment       String?
+  reservationId String  @unique
+  clientId      String
+  branchId      String
+  createdAt     DateTime @default(now())
+
+  client      User        @relation(fields: [clientId], references: [id])
+  branch      Branch      @relation(fields: [branchId], references: [id])
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+
+  @@index([branchId])
+  @@map("ratings")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, read])
+  @@map("notifications")
 }

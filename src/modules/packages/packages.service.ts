@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -58,11 +59,14 @@ export class PackagesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreatePackageDto, businessId: string): Promise<PackageResponse> {
-    const branch = await this.prisma.branch.findFirst({
-      where: { id: dto.branchId, businessId },
+    const branch = await this.prisma.branch.findUnique({
+      where: { id: dto.branchId },
     });
     if (!branch) {
       throw new NotFoundException('Branch not found');
+    }
+    if (branch.businessId !== businessId) {
+      throw new ForbiddenException('Branch does not belong to this business');
     }
 
     if (dto.categoryId) {
@@ -239,15 +243,18 @@ export class PackagesService {
       throw new NotFoundException('Package not found');
     }
     if (foodPackage.branch.businessId !== businessId) {
-      throw new NotFoundException('Package not found');
+      throw new ForbiddenException('Package does not belong to this business');
     }
 
     if (dto.branchId) {
-      const branch = await this.prisma.branch.findFirst({
-        where: { id: dto.branchId, businessId },
+      const branch = await this.prisma.branch.findUnique({
+        where: { id: dto.branchId },
       });
       if (!branch) {
         throw new NotFoundException('Branch not found');
+      }
+      if (branch.businessId !== businessId) {
+        throw new ForbiddenException('Branch does not belong to this business');
       }
     }
 

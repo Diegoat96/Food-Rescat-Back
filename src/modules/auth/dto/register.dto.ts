@@ -1,7 +1,9 @@
-import { IsString, IsEmail, MinLength, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsEmail, MinLength, IsOptional } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { UserRole } from '../../../common/enums/user-role.enum';
 
+// NOTE: the role is intentionally NOT accepted here. Public registration only
+// creates CLIENT accounts; BUSINESS/ADMIN must be created by an authenticated
+// ADMIN. Accepting a role from the public would allow privilege escalation.
 export class RegisterDto {
   @ApiProperty({ example: 'Juan Perez' })
   @IsString()
@@ -20,9 +22,4 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   phone?: string;
-
-  @ApiPropertyOptional({ enum: UserRole, default: UserRole.CLIENT })
-  @IsOptional()
-  @IsEnum(UserRole)
-  role?: UserRole;
 }

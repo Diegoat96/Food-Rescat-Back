@@ -56,6 +56,7 @@ export class BranchesController {
   @Get(':id')
   @ApiOperation({ summary: 'Get one branch of the authenticated business' })
   @ApiResponse({ status: 200, description: 'Branch returned' })
+  @ApiResponse({ status: 403, description: 'Branch belongs to another business' })
   @ApiResponse({ status: 404, description: 'Branch not found' })
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
@@ -67,6 +68,7 @@ export class BranchesController {
   @Patch(':id')
   @ApiOperation({ summary: 'Update one branch of the authenticated business' })
   @ApiResponse({ status: 200, description: 'Branch updated successfully' })
+  @ApiResponse({ status: 403, description: 'Branch belongs to another business' })
   @ApiResponse({ status: 404, description: 'Branch not found' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -79,6 +81,7 @@ export class BranchesController {
   @Delete(':id')
   @ApiOperation({ summary: 'Delete one branch of the authenticated business' })
   @ApiResponse({ status: 200, description: 'Branch deleted successfully' })
+  @ApiResponse({ status: 403, description: 'Branch belongs to another business' })
   @ApiResponse({ status: 404, description: 'Branch not found' })
   remove(
     @Param('id', ParseUUIDPipe) id: string,
