@@ -37,7 +37,8 @@ export class PackagesController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a package owned by the authenticated business' })
   @ApiResponse({ status: 201, description: 'Package created successfully' })
-  @ApiResponse({ status: 403, description: 'Requires BUSINESS role' })
+  @ApiResponse({ status: 403, description: 'Requires BUSINESS role or branch belongs to another business' })
+  @ApiResponse({ status: 404, description: 'Branch or category not found' })
   create(
     @Body() dto: CreatePackageDto,
     @CurrentUser('id') businessId: string,
@@ -81,7 +82,8 @@ export class PackagesController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a package owned by the authenticated business' })
   @ApiResponse({ status: 200, description: 'Package updated successfully' })
-  @ApiResponse({ status: 404, description: 'Package not found' })
+  @ApiResponse({ status: 403, description: 'Package or branch belongs to another business' })
+  @ApiResponse({ status: 404, description: 'Package, branch or category not found' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdatePackageDto,

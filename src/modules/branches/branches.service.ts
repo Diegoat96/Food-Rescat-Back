@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Branch } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateBranchDto } from './dto/create-branch.dto';
@@ -26,33 +26,39 @@ export class BranchesService {
   }
 
   async findOne(id: string, businessId: string): Promise<Branch> {
-    // Ownership is enforced inside the query itself, so a branch belonging to
-    // another business is simply "not found" instead of forbidden.
-    const branch = await this.prisma.branch.findFirst({
-      where: { id, businessId },
-    });
+    const branch = await this.prisma.branch.findUnique({ where: { id } });
     if (!branch) {
       throw new NotFoundException('Branch not found');
+    }
+    if (branch.businessId !== businessId) {
+      throw new ForbiddenException('Branch does not belong to this business');
     }
     return branch;
   }
 
-  // Same scoping strategy via the compound unique (id, businessId): a single
-  // statement fails with P2025, mapped to 404 by PrismaExceptionFilter.
-  update(
+  async update(
     id: string,
     dto: UpdateBranchDto,
     businessId: string,
   ): Promise<Branch> {
-    return this.prisma.branch.update({
-      where: { id_businessId: { id, businessId } },
-      data: dto,
-    });
+    const branch = await this.prisma.branch.findUnique({ where: { id } });
+    if (!branch) {
+      throw new NotFoundException('Branch not found');
+    }
+    if (branch.businessId !== businessId) {
+      throw new ForbiddenException('Branch does not belong to this business');
+    }
+    return this.prisma.branch.update({ where: { id }, data: dto });
   }
 
-  remove(id: string, businessId: string): Promise<Branch> {
-    return this.prisma.branch.delete({
-      where: { id_businessId: { id, businessId } },
-    });
+  async remove(id: string, businessId: string): Promise<Branch> {
+    const branch = await this.prisma.branch.findUnique({ where: { id } });
+    if (!branch) {
+      throw new NotFoundException('Branch not found');
+    }
+    if (branch.businessId !== businessId) {
+      throw new ForbiddenException('Branch does not belong to this business');
+    }
+    return this.prisma.branch.delete({ where: { id } });
   }
 }

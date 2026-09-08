@@ -4,12 +4,39 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: Foodrescat
-      POSTGRES_PASSWORD: F00dre$$C4t
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-foodrescat_dev}
       POSTGRES_DB: Foodrescat
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U Foodrescat -d Foodrescat"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://Foodrescat:${POSTGRES_PASSWORD:-foodrescat_dev}@postgres:5432/Foodrescat?schema=public
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env (or the shell)}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:4200}
+    ports:
+      - "3000:3000"
 
 volumes:
   postgres_data:
+  uploads_data:

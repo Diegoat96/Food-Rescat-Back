@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -31,11 +32,13 @@ export class ReservationsController {
   constructor(private readonly reservationsService: ReservationsService) {}
 
   @Post('verify')
+  @HttpCode(200)
   @ApiOperation({
     summary:
       'Verify a PENDING reservation of a branch owned by the authenticated business',
   })
   @ApiResponse({ status: 200, description: 'Reservation verified' })
+  @ApiResponse({ status: 403, description: 'Reservation belongs to another business' })
   @ApiResponse({ status: 404, description: 'Reservation not found' })
   verify(
     @Body() dto: VerifyReservationDto,
@@ -47,6 +50,7 @@ export class ReservationsController {
   @Patch(':id/complete')
   @ApiOperation({ summary: 'Complete a PENDING reservation (mark package PICKED_UP)' })
   @ApiResponse({ status: 200, description: 'Reservation completed' })
+  @ApiResponse({ status: 403, description: 'Reservation belongs to another business' })
   @ApiResponse({ status: 404, description: 'Reservation not found' })
   complete(
     @Param('id', ParseUUIDPipe) id: string,
