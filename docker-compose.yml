@@ -36,6 +36,15 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:4200}
     ports:
       - "3000:3000"
+  frontend:
+    build:
+      context: ../Food-Rescat-Front
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "4200:80"     
 
 volumes:
   postgres_data:
