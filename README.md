@@ -646,3 +646,5 @@ Desde ahí puedes probar cada endpoint con el botón **Authorize** (pega el
 - El cron de expiración marca como `EXPIRED` los paquetes/reservas cuya
   `pickupDeadline` ya pasó y notifica a los clientes con reservas por vencer
   (`PACKAGE_EXPIRING`).
+
+-Primer deploy-
