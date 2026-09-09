@@ -27,6 +27,7 @@ coverage
 .env
 .env.local
 .env.*.local
+.env.example
 
 # Uploads (business licenses / photos)
 /uploads
