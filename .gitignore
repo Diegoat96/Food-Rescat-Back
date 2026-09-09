@@ -1,0 +1,41 @@
+# compiled output
+dist
+node_modules
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+
+# Tests
+coverage
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.example
+
+# Uploads (business licenses / photos)
+/uploads
+
+# Prisma
+prisma/migrations/**/migration_lock.toml
+
+# Build
+*.js.map
+*.d.ts
+!nest-cli.json
