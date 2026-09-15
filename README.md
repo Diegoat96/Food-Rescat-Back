@@ -285,16 +285,16 @@ El registro público solo produce `CLIENT`. Para que un usuario sea `BUSINESS` o
 
 ## Endpoints por módulo
 
-> Leyenda: 🔓 público · 🔑 autenticado · ⚠ rol específico (mismo rol en
+> Leyenda: (público) público · (auth) autenticado · (rol: nombre_del_rol) rol específico (mismo rol en
 > `data.user.role`). `Bearer <token>` en el header `Authorization`.
 
 ### A) Autenticación — `/api/auth`
 
 | Método | Ruta   | Acceso | Descripción                       | Respuesta |
 | ------ | ------ | ------ | --------------------------------- | --------- |
-| POST   | `register` | 🔓 | Registra un usuario `CLIENT`     | `201` |
-| POST   | `login`     | 🔓 | Inicia sesión → `{ accessToken, user }` | `200` |
-| GET    | `me`        | 🔑 | Usuario actual autenticado        | `200` |
+| POST   | `register` | (público) | Registra un usuario `CLIENT`     | `201` |
+| POST   | `login`     | (público) | Inicia sesión → `{ accessToken, user }` | `200` |
+| GET    | `me`        | (auth) | Usuario actual autenticado        | `200` |
 
 ---
 
@@ -302,10 +302,10 @@ El registro público solo produce `CLIENT`. Para que un usuario sea `BUSINESS` o
 
 | Método | Ruta      | Acceso | Descripción                            | Respuesta |
 | ------ | --------- | ------ | -------------------------------------- | --------- |
-| GET    | `/`       | 🔓 | Lista todas las categorías (para selects del frontend) | `200` |
-| POST   | `/`       | ⚠ ADMIN | Crea una categoría                    | `201` |
-| PATCH  | `/:id`    | ⚠ ADMIN | Renombra una categoría                | `200` |
-| DELETE | `/:id`    | ⚠ ADMIN | Elimina una categoría                 | `200` |
+| GET    | `/`       | (público) | Lista todas las categorías (para selects del frontend) | `200` |
+| POST   | `/`       | (rol: ADMIN) | Crea una categoría                    | `201` |
+| PATCH  | `/:id`    | (rol: ADMIN) | Renombra una categoría                | `200` |
+| DELETE | `/:id`    | (rol: ADMIN) | Elimina una categoría                 | `200` |
 
 Body de creación/actualización:
 
@@ -338,16 +338,16 @@ Body de creación/actualización:
 
 | Método | Ruta | Acceso | Descripción | Respuesta |
 | ------ | ---- | ------ | ----------- | --------- |
-| POST   | `/`                    | ⚠ CLIENT | Crea la solicitud (multipart)  | `201` |
-| GET    | `me`                   | ⚠ CLIENT | Devuelve la solicitud más reciente del usuario | `200` |
+| POST   | `/`                    | (rol: CLIENT) | Crea la solicitud (multipart)  | `201` |
+| GET    | `me`                   | (rol: CLIENT) | Devuelve la solicitud más reciente del usuario | `200` |
 
 **Admin — gestiona las solicitudes:**
 
 | Método | Ruta                        | Acceso  | Descripción                                          | Respuesta |
 | ------ | --------------------------- | ------- | ---------------------------------------------------- | --------- |
-| GET    | `/api/admin/business-requests` | ⚠ ADMIN | Lista/filtra solicitudes por `status` + paginación (`skip`, `take`) | `200` |
-| PATCH  | `/api/admin/business-requests/:id/approve` | ⚠ ADMIN | Aprueba una `PENDING` y promueve al usuario a `BUSINESS` | `200` |
-| PATCH  | `/api/admin/business-requests/:id/reject`  | ⚠ ADMIN | Rechaza con `reason` obligatorio (máx 500)           | `200` |
+| GET    | `/api/admin/business-requests` | (rol: ADMIN) | Lista/filtra solicitudes por `status` + paginación (`skip`, `take`) | `200` |
+| PATCH  | `/api/admin/business-requests/:id/approve` | (rol: ADMIN) | Aprueba una `PENDING` y promueve al usuario a `BUSINESS` | `200` |
+| PATCH  | `/api/admin/business-requests/:id/reject`  | (rol: ADMIN) | Rechaza con `reason` obligatorio (máx 500)           | `200` |
 
 Body de rechazo:
 
@@ -398,11 +398,11 @@ Body de creación (todos string; `name` y `address` obligatorios):
 
 | Método | Ruta            | Acceso      | Descripción                                   | Respuesta |
 | ------ | --------------- | ----------- | --------------------------------------------- | --------- |
-| GET    | `/`             | 🔓 | Lista paquetes con filtros y paginación         | `200` |
-| GET    | `/:id`          | 🔓 | Obtiene un paquete por id                       | `200` |
-| POST   | `/`             | ⚠ BUSINESS | Publica un paquete de una sucursal propia        | `201` |
-| PATCH  | `/:id`          | ⚠ BUSINESS | Actualiza un paquete propio                     | `200` |
-| POST   | `/:id/reserve`  | ⚠ CLIENT | Reserva un paquete de forma atómica              | `201` |
+| GET    | `/`             | (público) | Lista paquetes con filtros y paginación         | `200` |
+| GET    | `/:id`          | (público) | Obtiene un paquete por id                       | `200` |
+| POST   | `/`             | (rol: BUSINESS) | Publica un paquete de una sucursal propia        | `201` |
+| PATCH  | `/:id`          | (rol: BUSINESS) | Actualiza un paquete propio                     | `200` |
+| POST   | `/:id/reserve`  | (rol: CLIENT) | Reserva un paquete de forma atómica              | `201` |
 
 **Listado público** — `GET /api/packages?...`:
 
@@ -469,8 +469,8 @@ la maneja (ownership), `404` si no existe.
 
 | Método | Ruta | Acceso | Descripción                                               | Respuesta |
 | ------ | ---- | ------ | --------------------------------------------------------- | --------- |
-| POST   | `/`  | ⚠ CLIENT | Valora una reserva **completada** propia                  | `201` |
-| GET    | `/api/branches/:id/ratings` | 🔓 | Ratings + promedio de una sucursal | `200` |
+| POST   | `/`  | (rol: CLIENT) | Valora una reserva **completada** propia                  | `201` |
+| GET    | `/api/branches/:id/ratings` | (público) | Ratings + promedio de una sucursal | `200` |
 
 Body de `POST /api/ratings`:
 
@@ -502,7 +502,7 @@ Errores: `404` sucursal inexistente · `409` ya está en favoritos.
 
 ---
 
-### I) Notificaciones — `/api/notifications` (🔑)
+### I) Notificaciones — `/api/notifications` (auth)
 
 | Método | Ruta         | Descripción                                            | Respuesta |
 | ------ | ------------ | ------------------------------------------------------ | --------- |
@@ -547,10 +547,10 @@ Errores: `403` si no eres ADMIN **o** intentas suspenderte a ti mismo/otro ADMIN
 
 | Método | Ruta                                | Acceso       | Descripción                                  |
 | ------ | ----------------------------------- | ------------ | -------------------------------------------- |
-| GET    | `/api/merchants/me/statistics/kpis` | ⚠ BUSINESS    | KPIs del negocio (dashboard)                 |
-| GET    | `/api/customers/me/statistics`      | ⚠ CLIENT      | Estadísticas de impacto del cliente          |
-| GET    | `/api/businesses/me/stats/today`    | ⚠ BUSINESS    | Estadísticas del día del negocio             |
-| GET    | `/api/admin/statistics`             | ⚠ ADMIN       | Estadísticas globales de la plataforma       |
+| GET    | `/api/merchants/me/statistics/kpis` | (rol: BUSINESS)    | KPIs del negocio (dashboard)                 |
+| GET    | `/api/customers/me/statistics`      | (rol: CLIENT)      | Estadísticas de impacto del cliente          |
+| GET    | `/api/businesses/me/stats/today`    | (rol: BUSINESS)    | Estadísticas del día del negocio             |
+| GET    | `/api/admin/statistics`             | (rol: ADMIN)       | Estadísticas globales de la plataforma       |
 
 ---
 

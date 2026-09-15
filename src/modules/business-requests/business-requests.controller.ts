@@ -23,6 +23,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { SupabaseService } from '../supabase/supabase.service';
 import { BusinessRequestsService } from './business-requests.service';
 import { CreateBusinessRequestDto } from './dto/create-business-request.dto';
 import { BusinessRequestResponseDto } from './dto/business-request-response.dto';
@@ -31,8 +32,7 @@ import {
   BUSINESS_LICENSES_DIR,
   BUSINESS_PHOTOS_DIR,
 } from './files/business-request-multer.options';
-
-const STATIC_PREFIX = '/api/static';
+import { businessRequestFilename } from './files/business-request-file.helpers';
 
 @ApiTags('Business Requests')
 @ApiBearerAuth()
@@ -41,6 +41,7 @@ const STATIC_PREFIX = '/api/static';
 export class BusinessRequestsController {
   constructor(
     private readonly businessRequestsService: BusinessRequestsService,
+    private readonly supabaseService: SupabaseService,
   ) {}
 
   @Post()
@@ -73,7 +74,7 @@ export class BusinessRequestsController {
   @ApiResponse({ status: 400, description: 'Invalid file type or missing businessLicense' })
   @ApiResponse({ status: 403, description: 'Requires CLIENT role' })
   @ApiResponse({ status: 409, description: 'A PENDING request already exists for this user' })
-  create(
+  async create(
     @Body() dto: CreateBusinessRequestDto,
     @UploadedFiles()
     files?: {
@@ -88,16 +89,25 @@ export class BusinessRequestsController {
     }
     const photoFile = files?.photo?.[0];
 
-    return this.businessRequestsService.create(
-      dto,
-      userId!,
-      {
-        businessLicenseUrl: `${STATIC_PREFIX}/${BUSINESS_LICENSES_DIR}/${licenseFile.filename}`,
-        photoUrl: photoFile
-          ? `${STATIC_PREFIX}/${BUSINESS_PHOTOS_DIR}/${photoFile.filename}`
-          : null,
-      },
+    const businessLicenseUrl = await this.supabaseService.uploadFile(
+      BUSINESS_LICENSES_DIR,
+      businessRequestFilename(licenseFile),
+      licenseFile.buffer,
+      licenseFile.mimetype,
     );
+    const photoUrl = photoFile
+      ? await this.supabaseService.uploadFile(
+          BUSINESS_PHOTOS_DIR,
+          businessRequestFilename(photoFile),
+          photoFile.buffer,
+          photoFile.mimetype,
+        )
+      : null;
+
+    return this.businessRequestsService.create(dto, userId!, {
+      businessLicenseUrl,
+      photoUrl,
+    });
   }
 
   @Get('me')
