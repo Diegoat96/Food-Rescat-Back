@@ -49,11 +49,12 @@ export class ReservationsService {
       );
     }
 
+    // Notificación traducida al español
     await this.notificationsService.createForUser({
       userId: reservation.client.id,
       type: 'RESERVATION_CONFIRMED',
-      title: 'Reservation confirmed',
-      message: `Your reservation for ${reservation.package.name} at ${reservation.branch.name} has been confirmed.`,
+      title: 'Reserva confirmada',
+      message: `Tu reserva de ${reservation.package.name} en ${reservation.branch.name} ha sido confirmada.`,
     });
 
     return reservation;
@@ -120,11 +121,12 @@ export class ReservationsService {
       });
 
       if (fullReservation) {
+        // Notificación traducida al español
         await this.notificationsService.createForUser({
           userId: fullReservation.client.id,
           type: 'RESERVATION_COMPLETED',
-          title: 'Reservation completed',
-          message: `Your reservation for ${fullReservation.package.name} has been marked as completed.`,
+          title: 'Reserva completada',
+          message: `Tu reserva de ${fullReservation.package.name} ha sido marcada como completada.`,
         });
       }
 

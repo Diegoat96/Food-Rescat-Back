@@ -27,6 +27,7 @@ export interface PackageResponse {
   id: string;
   name: string;
   description: string | null;
+  imageUrl: string | null;
   originalPrice: number;
   discountedPrice: number;
   estimatedWeightKg: number;
@@ -42,6 +43,8 @@ export interface PackageResponse {
   category: PackageWithRelations['category'];
   urgent: boolean;
   discountPercentage: number;
+  ratingAverage: number;
+  ratingCount: number;
 }
 
 export interface PackageListResponse {
@@ -82,6 +85,7 @@ export class PackagesService {
       data: {
         name: dto.name,
         description: dto.description,
+        imageUrl: dto.imageUrl,
         originalPrice: dto.originalPrice,
         discountedPrice: dto.discountedPrice,
         estimatedWeightKg: dto.estimatedWeightKg,
@@ -97,7 +101,10 @@ export class PackagesService {
       },
     });
 
-    return this.toResponse(foodPackage as unknown as PackageWithRelations);
+    return this.toResponse(
+      foodPackage as unknown as PackageWithRelations,
+      { average: 0, count: 0 },
+    );
   }
 
   async findAll(query: QueryPackagesDto): Promise<PackageListResponse> {
@@ -127,9 +134,17 @@ export class PackagesService {
       this.prisma.foodPackage.count({ where }),
     ]);
 
+    const summaryByPackage =
+      foodPackages.length === 0
+        ? new Map<string, { average: number; count: number }>()
+        : await this.getRatingSummary(foodPackages.map((p) => p.id));
+
     return {
       data: foodPackages.map((p) =>
-        this.toResponse(p as unknown as PackageWithRelations),
+        this.toResponse(
+          p as unknown as PackageWithRelations,
+          summaryByPackage.get(p.id) ?? { average: 0, count: 0 },
+        ),
       ),
       total,
       skip,
@@ -148,7 +163,14 @@ export class PackagesService {
     if (!foodPackage) {
       throw new NotFoundException('Package not found');
     }
-    return this.toResponse(foodPackage as unknown as PackageWithRelations);
+    const summary = (await this.getRatingSummary([id])).get(id) ?? {
+      average: 0,
+      count: 0,
+    };
+    return this.toResponse(
+      foodPackage as unknown as PackageWithRelations,
+      summary,
+    );
   }
 
   async reserve(
@@ -284,7 +306,10 @@ export class PackagesService {
     return this.toResponse(updated as unknown as PackageWithRelations);
   }
 
-  private toResponse(foodPackage: PackageWithRelations): PackageResponse {
+  private toResponse(
+    foodPackage: PackageWithRelations,
+    ratingSummary?: { average: number; count: number },
+  ): PackageResponse {
     const original = Number(foodPackage.originalPrice);
     const discounted = Number(foodPackage.discountedPrice);
     const discountPercentage =
@@ -297,6 +322,7 @@ export class PackagesService {
       id: foodPackage.id,
       name: foodPackage.name,
       description: foodPackage.description,
+      imageUrl: foodPackage.imageUrl,
       originalPrice: original,
       discountedPrice: discounted,
       estimatedWeightKg: Number(foodPackage.estimatedWeightKg),
@@ -312,6 +338,29 @@ export class PackagesService {
       category: foodPackage.category,
       urgent,
       discountPercentage,
+      ratingAverage: ratingSummary?.average ?? 0,
+      ratingCount: ratingSummary?.count ?? 0,
     };
+  }
+
+  private async getRatingSummary(
+    packageIds: string[],
+  ): Promise<Map<string, { average: number; count: number }>> {
+    const grouped = await this.prisma.rating.groupBy({
+      by: ['packageId'],
+      where: { packageId: { in: packageIds } },
+      _avg: { score: true },
+      _count: true,
+    });
+
+    return new Map(
+      grouped.map((row) => [
+        row.packageId,
+        {
+          average: row._avg.score ? Number(row._avg.score) : 0,
+          count: row._count,
+        },
+      ]),
+    );
   }
 }

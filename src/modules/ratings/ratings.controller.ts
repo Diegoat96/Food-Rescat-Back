@@ -1,6 +1,9 @@
 import {
   Body,
   Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -38,5 +41,24 @@ export class RatingsController {
     @CurrentUser('id') clientId: string,
   ) {
     return this.ratingsService.create(dto, clientId);
+  }
+
+  @Get('me/package/:packageId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.CLIENT)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Get the reservationId of a completed, unrated rescue for a package (CLIENT)',
+  })
+  @ApiResponse({ status: 200, description: 'reservationId or null if not rateable' })
+  findMyRateableReservation(
+    @Param('packageId', ParseUUIDPipe) packageId: string,
+    @CurrentUser('id') clientId: string,
+  ) {
+    return this.ratingsService.findUnratedCompletedReservationForPackage(
+      packageId,
+      clientId,
+    );
   }
 }

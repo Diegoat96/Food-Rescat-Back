@@ -18,6 +18,7 @@ async function bootstrap() {
     process.env.UPLOADS_ROOT ?? join(process.cwd(), "uploads");
   mkdirSync(join(uploadsRoot, "business-licenses"), { recursive: true });
   mkdirSync(join(uploadsRoot, "business-photos"), { recursive: true });
+  mkdirSync(join(uploadsRoot, "package-images"), { recursive: true });
 
   app.setGlobalPrefix("api");
   app.use(helmet());
@@ -63,7 +64,8 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup("api/docs", app, document);
 
-  const port = 3001;
+  const port = configService.get<number>('port', 3001);
+  const port = configService.get<number>('PORT', 3000);
   await app.listen(port);
   console.log(`Application running on http://localhost:${port}`);
   console.log(`Swagger docs at http://localhost:${port}/api/docs`);
