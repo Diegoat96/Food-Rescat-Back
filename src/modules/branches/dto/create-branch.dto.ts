@@ -1,5 +1,6 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { BusinessType } from '@prisma/client';
 
 // businessId is never accepted from the request body (the global ValidationPipe
 // forbids non-whitelisted properties); it is derived from the JWT via @CurrentUser.
@@ -11,6 +12,10 @@ export class CreateBranchDto {
   @ApiProperty({ example: '123 Main Street' })
   @IsString()
   address!: string;
+
+  @ApiProperty({ enum: BusinessType, example: BusinessType.CAFETERIA })
+  @IsEnum(BusinessType)
+  businessType!: BusinessType;
 
   @ApiPropertyOptional({ example: 'Guatemala' })
   @IsOptional()

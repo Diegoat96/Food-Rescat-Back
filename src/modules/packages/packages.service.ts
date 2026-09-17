@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  BusinessType,
   FoodPackage,
   PackageStatus,
   PaymentMethod,
@@ -20,7 +21,13 @@ import { QueryPackagesDto } from './dto/query-packages.dto';
 import { ListMyPackagesDto } from './dto/list-my-packages.dto';
 
 export type PackageWithRelations = FoodPackage & {
-  branch: { id: string; name: string; city: string; address: string };
+  branch: {
+    id: string;
+    name: string;
+    city: string;
+    address: string;
+    businessType: BusinessType;
+  };
   category: { id: string; name: string };
 };
 
@@ -97,7 +104,15 @@ export class PackagesService {
         categoryId: dto.categoryId,
       },
       include: {
-        branch: { select: { id: true, name: true, city: true, address: true } },
+        branch: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              address: true,
+              businessType: true,
+            },
+          },
         category: { select: { id: true, name: true } },
       },
     });
@@ -113,19 +128,33 @@ export class PackagesService {
     const take = query.take ?? 20;
     const status = query.status ?? PackageStatus.AVAILABLE;
 
+    const branchFilter: Prisma.BranchWhereInput = {};
+    if (query.city) {
+      branchFilter.city = { contains: query.city, mode: 'insensitive' };
+    }
+    if (query.businessType) {
+      branchFilter.businessType = query.businessType;
+    }
+
     const where: Prisma.FoodPackageWhereInput = {
       status,
       ...(query.categoryId ? { categoryId: query.categoryId } : {}),
-      ...(query.city
-        ? { branch: { city: { contains: query.city, mode: 'insensitive' } } }
-        : {}),
+      ...(Object.keys(branchFilter).length > 0 ? { branch: branchFilter } : {}),
     };
 
     const [foodPackages, total] = await this.prisma.$transaction([
       this.prisma.foodPackage.findMany({
         where,
         include: {
-          branch: { select: { id: true, name: true, city: true, address: true } },
+          branch: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              address: true,
+              businessType: true,
+            },
+          },
           category: { select: { id: true, name: true } },
         },
         orderBy: { publishedAt: 'desc' },
@@ -182,7 +211,15 @@ export class PackagesService {
       this.prisma.foodPackage.findMany({
         where,
         include: {
-          branch: { select: { id: true, name: true, city: true, address: true } },
+          branch: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              address: true,
+              businessType: true,
+            },
+          },
           category: { select: { id: true, name: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -214,7 +251,15 @@ export class PackagesService {
     const foodPackage = await this.prisma.foodPackage.findUnique({
       where: { id },
       include: {
-        branch: { select: { id: true, name: true, city: true, address: true } },
+        branch: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              address: true,
+              businessType: true,
+            },
+          },
         category: { select: { id: true, name: true } },
       },
     });
@@ -335,7 +380,15 @@ export class PackagesService {
       where: { id },
       data: { status: PackageStatus.CANCELLED },
       include: {
-        branch: { select: { id: true, name: true, city: true, address: true } },
+        branch: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              address: true,
+              businessType: true,
+            },
+          },
         category: { select: { id: true, name: true } },
       },
     });
@@ -389,7 +442,15 @@ export class PackagesService {
       where: { id },
       data,
       include: {
-        branch: { select: { id: true, name: true, city: true, address: true } },
+        branch: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              address: true,
+              businessType: true,
+            },
+          },
         category: { select: { id: true, name: true } },
       },
     });

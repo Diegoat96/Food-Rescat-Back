@@ -8,7 +8,7 @@ import {
   Min,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { PackageStatus } from '@prisma/client';
+import { BusinessType, PackageStatus } from '@prisma/client';
 
 export class QueryPackagesDto {
   @ApiPropertyOptional({ example: 'Guatemala' })
@@ -20,6 +20,14 @@ export class QueryPackagesDto {
   @IsOptional()
   @IsUUID()
   categoryId?: string;
+
+  @ApiPropertyOptional({
+    enum: BusinessType,
+    description: 'Filter by the branch business type',
+  })
+  @IsOptional()
+  @IsEnum(BusinessType)
+  businessType?: BusinessType;
 
   @ApiPropertyOptional({ enum: PackageStatus, default: PackageStatus.AVAILABLE })
   @IsOptional()
