@@ -146,6 +146,7 @@ model FoodPackage {
   id                String        @id @default(uuid())
   name              String
   description       String?
+  imageUrl          String?
   originalPrice     Decimal       @db.Decimal(10, 2)
   discountedPrice   Decimal       @db.Decimal(10, 2)
   estimatedWeightKg Decimal       @db.Decimal(8, 2)
@@ -158,10 +159,10 @@ model FoodPackage {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
-  branch   Branch   @relation(fields: [branchId], references: [id])
-  category Category @relation(fields: [categoryId], references: [id])
-
-  reservations Reservation[]
+  branch        Branch        @relation(fields: [branchId], references: [id])
+  category      Category      @relation(fields: [categoryId], references: [id])
+  reservations  Reservation[]
+  ratings       Rating[]
 
   @@index([branchId, status])
   @@index([categoryId, status])
@@ -186,16 +187,20 @@ model Rating {
   id            String  @id @default(uuid())
   score         Int
   comment       String?
-  reservationId String  @unique
+  reservationId String? @unique
   clientId      String
   branchId      String
+  packageId     String
   createdAt     DateTime @default(now())
 
-  client      User        @relation(fields: [clientId], references: [id])
-  branch      Branch      @relation(fields: [branchId], references: [id])
-  reservation Reservation @relation(fields: [reservationId], references: [id])
+  client      User          @relation(fields: [clientId], references: [id])
+  branch      Branch        @relation(fields: [branchId], references: [id])
+  package     FoodPackage   @relation(fields: [packageId], references: [id])
+  reservation Reservation? @relation(fields: [reservationId], references: [id])
 
   @@index([branchId])
+  @@index([packageId])
+  @@unique([clientId, packageId])
   @@map("ratings")
 }
 

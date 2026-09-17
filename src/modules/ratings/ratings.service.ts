@@ -14,24 +14,49 @@ export class RatingsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateRatingDto, clientId: string) {
-    const reservation = await this.prisma.reservation.findUnique({
-      where: { id: dto.reservationId },
-      include: {
-        package: { select: { branchId: true } },
-      },
-    });
+    let reservationId: string | null = null;
+    let packageId: string;
+    let branchId: string;
 
-    if (!reservation) {
-      throw new NotFoundException('Reservation not found');
-    }
+    if (dto.reservationId) {
+      const reservation = await this.prisma.reservation.findUnique({
+        where: { id: dto.reservationId },
+        include: {
+          package: { select: { id: true, branchId: true } },
+        },
+      });
 
-    if (reservation.clientId !== clientId) {
-      throw new ForbiddenException('You can only rate your own reservations');
-    }
+      if (!reservation) {
+        throw new NotFoundException('Reservation not found');
+      }
 
-    if (reservation.status !== ReservationStatus.COMPLETED) {
+      if (reservation.clientId !== clientId) {
+        throw new ForbiddenException('You can only rate your own reservations');
+      }
+
+      if (reservation.status !== ReservationStatus.COMPLETED) {
+        throw new BadRequestException(
+          'Only completed reservations can be rated',
+        );
+      }
+
+      reservationId = reservation.id;
+      packageId = reservation.package.id;
+      branchId = reservation.branchId;
+    } else if (dto.packageId) {
+      const foodPackage = await this.prisma.foodPackage.findUnique({
+        where: { id: dto.packageId },
+      });
+
+      if (!foodPackage) {
+        throw new NotFoundException('Package not found');
+      }
+
+      packageId = foodPackage.id;
+      branchId = foodPackage.branchId;
+    } else {
       throw new BadRequestException(
-        'Only completed reservations can be rated',
+        'Either reservationId or packageId is required',
       );
     }
 
@@ -40,9 +65,10 @@ export class RatingsService {
         data: {
           score: dto.score,
           comment: dto.comment,
-          reservationId: dto.reservationId,
+          reservationId,
           clientId,
-          branchId: reservation.branchId,
+          branchId,
+          packageId,
         },
       });
     } catch (error) {
@@ -50,7 +76,7 @@ export class RatingsService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        throw new ConflictException('This reservation has already been rated');
+        throw new ConflictException('You have already rated this package');
       }
       throw error;
     }
@@ -77,5 +103,46 @@ export class RatingsService {
       average: aggregate._avg.score ?? 0,
       total: aggregate._count,
     };
+  }
+
+  async findByPackage(packageId: string) {
+    const [ratings, aggregate] = await this.prisma.$transaction([
+      this.prisma.rating.findMany({
+        where: { packageId },
+        include: {
+          client: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.rating.aggregate({
+        where: { packageId },
+        _avg: { score: true },
+        _count: true,
+      }),
+    ]);
+
+    return {
+      ratings,
+      average: aggregate._avg.score ?? 0,
+      total: aggregate._count,
+    };
+  }
+
+  async findUnratedCompletedReservationForPackage(
+    packageId: string,
+    clientId: string,
+  ) {
+    const reservation = await this.prisma.reservation.findFirst({
+      where: {
+        packageId,
+        clientId,
+        status: ReservationStatus.COMPLETED,
+        rating: null,
+      },
+      orderBy: { updatedAt: 'desc' },
+      select: { id: true },
+    });
+
+    return reservation ? { reservationId: reservation.id } : { reservationId: null };
   }
 }

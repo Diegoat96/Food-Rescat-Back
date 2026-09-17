@@ -13,7 +13,13 @@ export class CreateRatingDto {
   @IsString()
   comment?: string;
 
-  @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @ApiPropertyOptional({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @IsOptional()
   @IsUUID()
-  reservationId!: string;
+  reservationId?: string;
+
+  @ApiPropertyOptional({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @IsOptional()
+  @IsUUID()
+  packageId?: string;
 }
