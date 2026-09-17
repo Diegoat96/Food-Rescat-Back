@@ -56,4 +56,12 @@ export class CreatePackageDto {
   @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
   @IsUUID()
   categoryId!: string;
+
+  @ApiPropertyOptional({
+    example: 'https://xxx.supabase.co/storage/v1/object/public/foodrescat/package-images/uuid.jpg',
+    description: 'Public URL of the package image (set by the server after upload)',
+  })
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
 }
