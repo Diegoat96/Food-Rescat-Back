@@ -310,6 +310,39 @@ export class PackagesService {
     return `RC-${suffix}`;
   }
 
+  async cancel(id: string, businessId: string): Promise<PackageResponse> {
+    const foodPackage = await this.prisma.foodPackage.findUnique({
+      where: { id },
+      include: { branch: true },
+    });
+    if (!foodPackage) {
+      throw new NotFoundException('Package not found');
+    }
+    if (foodPackage.branch.businessId !== businessId) {
+      throw new ForbiddenException('Package does not belong to this business');
+    }
+
+    const cancellable =
+      foodPackage.status === PackageStatus.AVAILABLE ||
+      foodPackage.status === PackageStatus.RESERVED;
+    if (!cancellable) {
+      throw new ConflictException(
+        'Only AVAILABLE or RESERVED packages can be cancelled',
+      );
+    }
+
+    const updated = await this.prisma.foodPackage.update({
+      where: { id },
+      data: { status: PackageStatus.CANCELLED },
+      include: {
+        branch: { select: { id: true, name: true, city: true, address: true } },
+        category: { select: { id: true, name: true } },
+      },
+    });
+
+    return this.toResponse(updated as unknown as PackageWithRelations);
+  }
+
   async update(
     id: string,
     dto: UpdatePackageDto,
