@@ -17,6 +17,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePackageDto } from './dto/create-package.dto';
 import { UpdatePackageDto } from './dto/update-package.dto';
 import { QueryPackagesDto } from './dto/query-packages.dto';
+import { ListMyPackagesDto } from './dto/list-my-packages.dto';
 
 export type PackageWithRelations = FoodPackage & {
   branch: { id: string; name: string; city: string; address: string };
@@ -128,6 +129,63 @@ export class PackagesService {
           category: { select: { id: true, name: true } },
         },
         orderBy: { publishedAt: 'desc' },
+        skip,
+        take,
+      }),
+      this.prisma.foodPackage.count({ where }),
+    ]);
+
+    const summaryByPackage =
+      foodPackages.length === 0
+        ? new Map<string, { average: number; count: number }>()
+        : await this.getRatingSummary(foodPackages.map((p) => p.id));
+
+    return {
+      data: foodPackages.map((p) =>
+        this.toResponse(
+          p as unknown as PackageWithRelations,
+          summaryByPackage.get(p.id) ?? { average: 0, count: 0 },
+        ),
+      ),
+      total,
+      skip,
+      take,
+    };
+  }
+
+  async findAllForBusiness(
+    businessId: string,
+    filters: ListMyPackagesDto,
+  ): Promise<PackageListResponse> {
+    const skip = filters.skip ?? 0;
+    const take = filters.take ?? 20;
+
+    if (filters.branchId) {
+      const branch = await this.prisma.branch.findUnique({
+        where: { id: filters.branchId },
+      });
+      if (!branch) {
+        throw new NotFoundException('Branch not found');
+      }
+      if (branch.businessId !== businessId) {
+        throw new ForbiddenException('Branch does not belong to this business');
+      }
+    }
+
+    const where: Prisma.FoodPackageWhereInput = {
+      branch: { businessId },
+      ...(filters.branchId ? { branchId: filters.branchId } : {}),
+      ...(filters.status ? { status: filters.status } : {}),
+    };
+
+    const [foodPackages, total] = await this.prisma.$transaction([
+      this.prisma.foodPackage.findMany({
+        where,
+        include: {
+          branch: { select: { id: true, name: true, city: true, address: true } },
+          category: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
         skip,
         take,
       }),
