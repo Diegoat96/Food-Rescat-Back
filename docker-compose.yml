@@ -28,6 +28,9 @@ services:
     volumes:
       - uploads_data:/app/uploads
     environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: foodrescat_bd
       NODE_ENV: production
       PORT: 3000
       DATABASE_URL: postgresql://Foodrescat:${POSTGRES_PASSWORD:-foodrescat_dev}@postgres:5432/Foodrescat?schema=public
