@@ -100,8 +100,8 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
         this.notificationsService.createForUser({
           userId: reservation.client.id,
           type: 'PACKAGE_EXPIRING',
-          title: 'Package expiring soon',
-          message: `Your reserved package "${reservation.package.name}" at ${reservation.branch.name} expires in less than 30 minutes.`,
+          title: 'Tu paquete está por vencer',
+          message: `Tu paquete reservado "${reservation.package.name}" en ${reservation.branch.name} vence en menos de 30 minutos.`,
         }),
       ),
     );

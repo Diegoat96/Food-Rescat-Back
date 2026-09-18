@@ -16,6 +16,7 @@ export class BranchesService {
         city: dto.city,
         phone: dto.phone,
         openingHours: dto.openingHours,
+        businessType: dto.businessType,
         businessId,
       },
     });
