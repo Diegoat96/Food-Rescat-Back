@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  BusinessType,
   FoodPackage,
   PackageStatus,
   PaymentMethod,
@@ -17,9 +18,16 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePackageDto } from './dto/create-package.dto';
 import { UpdatePackageDto } from './dto/update-package.dto';
 import { QueryPackagesDto } from './dto/query-packages.dto';
+import { ListMyPackagesDto } from './dto/list-my-packages.dto';
 
 export type PackageWithRelations = FoodPackage & {
-  branch: { id: string; name: string; city: string; address: string };
+  branch: {
+    id: string;
+    name: string;
+    city: string;
+    address: string;
+    businessType: BusinessType;
+  };
   category: { id: string; name: string };
 };
 
@@ -96,7 +104,15 @@ export class PackagesService {
         categoryId: dto.categoryId,
       },
       include: {
-        branch: { select: { id: true, name: true, city: true, address: true } },
+        branch: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              address: true,
+              businessType: true,
+            },
+          },
         category: { select: { id: true, name: true } },
       },
     });
@@ -112,22 +128,101 @@ export class PackagesService {
     const take = query.take ?? 20;
     const status = query.status ?? PackageStatus.AVAILABLE;
 
+    const branchFilter: Prisma.BranchWhereInput = {};
+    if (query.city) {
+      branchFilter.city = { contains: query.city, mode: 'insensitive' };
+    }
+    if (query.businessType) {
+      branchFilter.businessType = query.businessType;
+    }
+
     const where: Prisma.FoodPackageWhereInput = {
       status,
       ...(query.categoryId ? { categoryId: query.categoryId } : {}),
-      ...(query.city
-        ? { branch: { city: { contains: query.city, mode: 'insensitive' } } }
-        : {}),
+      ...(Object.keys(branchFilter).length > 0 ? { branch: branchFilter } : {}),
     };
 
     const [foodPackages, total] = await this.prisma.$transaction([
       this.prisma.foodPackage.findMany({
         where,
         include: {
-          branch: { select: { id: true, name: true, city: true, address: true } },
+          branch: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              address: true,
+              businessType: true,
+            },
+          },
           category: { select: { id: true, name: true } },
         },
         orderBy: { publishedAt: 'desc' },
+        skip,
+        take,
+      }),
+      this.prisma.foodPackage.count({ where }),
+    ]);
+
+    const summaryByPackage =
+      foodPackages.length === 0
+        ? new Map<string, { average: number; count: number }>()
+        : await this.getRatingSummary(foodPackages.map((p) => p.id));
+
+    return {
+      data: foodPackages.map((p) =>
+        this.toResponse(
+          p as unknown as PackageWithRelations,
+          summaryByPackage.get(p.id) ?? { average: 0, count: 0 },
+        ),
+      ),
+      total,
+      skip,
+      take,
+    };
+  }
+
+  async findAllForBusiness(
+    businessId: string,
+    filters: ListMyPackagesDto,
+  ): Promise<PackageListResponse> {
+    const skip = filters.skip ?? 0;
+    const take = filters.take ?? 20;
+
+    if (filters.branchId) {
+      const branch = await this.prisma.branch.findUnique({
+        where: { id: filters.branchId },
+      });
+      if (!branch) {
+        throw new NotFoundException('Branch not found');
+      }
+      if (branch.businessId !== businessId) {
+        throw new ForbiddenException('Branch does not belong to this business');
+      }
+    }
+
+    const where: Prisma.FoodPackageWhereInput = {
+      branch: { businessId },
+      ...(filters.branchId ? { branchId: filters.branchId } : {}),
+      ...(filters.status ? { status: filters.status } : {}),
+    };
+
+    const [foodPackages, total] = await this.prisma.$transaction([
+      this.prisma.foodPackage.findMany({
+        where,
+        include: {
+          branch: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              address: true,
+              businessType: true,
+            },
+          },
+          category: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
         skip,
         take,
       }),
@@ -156,7 +251,15 @@ export class PackagesService {
     const foodPackage = await this.prisma.foodPackage.findUnique({
       where: { id },
       include: {
-        branch: { select: { id: true, name: true, city: true, address: true } },
+        branch: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              address: true,
+              businessType: true,
+            },
+          },
         category: { select: { id: true, name: true } },
       },
     });
@@ -252,6 +355,47 @@ export class PackagesService {
     return `RC-${suffix}`;
   }
 
+  async cancel(id: string, businessId: string): Promise<PackageResponse> {
+    const foodPackage = await this.prisma.foodPackage.findUnique({
+      where: { id },
+      include: { branch: true },
+    });
+    if (!foodPackage) {
+      throw new NotFoundException('Package not found');
+    }
+    if (foodPackage.branch.businessId !== businessId) {
+      throw new ForbiddenException('Package does not belong to this business');
+    }
+
+    const cancellable =
+      foodPackage.status === PackageStatus.AVAILABLE ||
+      foodPackage.status === PackageStatus.RESERVED;
+    if (!cancellable) {
+      throw new ConflictException(
+        'Only AVAILABLE or RESERVED packages can be cancelled',
+      );
+    }
+
+    const updated = await this.prisma.foodPackage.update({
+      where: { id },
+      data: { status: PackageStatus.CANCELLED },
+      include: {
+        branch: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              address: true,
+              businessType: true,
+            },
+          },
+        category: { select: { id: true, name: true } },
+      },
+    });
+
+    return this.toResponse(updated as unknown as PackageWithRelations);
+  }
+
   async update(
     id: string,
     dto: UpdatePackageDto,
@@ -298,7 +442,15 @@ export class PackagesService {
       where: { id },
       data,
       include: {
-        branch: { select: { id: true, name: true, city: true, address: true } },
+        branch: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              address: true,
+              businessType: true,
+            },
+          },
         category: { select: { id: true, name: true } },
       },
     });

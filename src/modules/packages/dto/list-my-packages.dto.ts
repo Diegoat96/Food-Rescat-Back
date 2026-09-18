@@ -3,33 +3,25 @@ import {
   IsEnum,
   IsInt,
   IsOptional,
-  IsString,
   IsUUID,
   Min,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { BusinessType, PackageStatus } from '@prisma/client';
+import { PackageStatus } from '@prisma/client';
 
-export class QueryPackagesDto {
-  @ApiPropertyOptional({ example: 'Guatemala' })
-  @IsOptional()
-  @IsString()
-  city?: string;
-
-  @ApiPropertyOptional({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
-  @IsOptional()
-  @IsUUID()
-  categoryId?: string;
-
+export class ListMyPackagesDto {
   @ApiPropertyOptional({
-    enum: BusinessType,
-    description: 'Filter by the branch business type',
+    description: 'Filter by one of the business own branches',
   })
   @IsOptional()
-  @IsEnum(BusinessType)
-  businessType?: BusinessType;
+  @IsUUID()
+  branchId?: string;
 
-  @ApiPropertyOptional({ enum: PackageStatus, default: PackageStatus.AVAILABLE })
+  @ApiPropertyOptional({
+    enum: PackageStatus,
+    description:
+      'No default: when omitted, packages of every status are returned',
+  })
   @IsOptional()
   @IsEnum(PackageStatus)
   status?: PackageStatus;

@@ -19,31 +19,57 @@ export class BusinessesService {
     const endOfDay = new Date(startOfDay);
     endOfDay.setDate(endOfDay.getDate() + 1);
 
-    const completed = await this.prisma.reservation.findMany({
+    // The DB aggregates COMPLETED reservations per package, so only distinct
+    // packages are transferred instead of one row per reservation. Each
+    // completed reservation rescues one package unit, hence the count is
+    // multiplied by the package weight/price.
+    const completedByPackage = await this.prisma.reservation.groupBy({
+      by: ['packageId'],
       where: {
         status: ReservationStatus.COMPLETED,
         updatedAt: { gte: startOfDay, lt: endOfDay },
         branch: { businessId },
       },
-      select: {
-        package: {
-          select: { estimatedWeightKg: true, discountedPrice: true },
-        },
-      },
+      _count: { _all: true },
     });
 
-    const kgRescuedToday = completed.reduce(
-      (sum, reservation) => sum + Number(reservation.package.estimatedWeightKg),
+    const ordersCompletedToday = completedByPackage.reduce(
+      (sum, row) => sum + row._count._all,
       0,
     );
-    const revenueToday = completed.reduce(
-      (sum, reservation) => sum + Number(reservation.package.discountedPrice),
+
+    const packageIds = completedByPackage.map((row) => row.packageId);
+    const packages = packageIds.length
+      ? await this.prisma.foodPackage.findMany({
+          where: { id: { in: packageIds } },
+          select: {
+            id: true,
+            estimatedWeightKg: true,
+            discountedPrice: true,
+          },
+        })
+      : [];
+    const weightByPackage = new Map(
+      packages.map((p) => [p.id, Number(p.estimatedWeightKg)]),
+    );
+    const priceByPackage = new Map(
+      packages.map((p) => [p.id, Number(p.discountedPrice)]),
+    );
+
+    const kgRescuedToday = completedByPackage.reduce(
+      (sum, row) =>
+        sum + (weightByPackage.get(row.packageId) ?? 0) * row._count._all,
+      0,
+    );
+    const revenueToday = completedByPackage.reduce(
+      (sum, row) =>
+        sum + (priceByPackage.get(row.packageId) ?? 0) * row._count._all,
       0,
     );
 
     return {
       kgRescuedToday: Number(kgRescuedToday.toFixed(2)),
-      ordersCompletedToday: completed.length,
+      ordersCompletedToday,
       revenueToday: Number(revenueToday.toFixed(2)),
     };
   }
