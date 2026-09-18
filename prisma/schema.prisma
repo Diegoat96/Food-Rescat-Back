@@ -40,6 +40,14 @@ enum PaymentMethod {
   OTHER
 }
 
+enum BusinessType {
+  CAFETERIA
+  RESTAURANTE
+  PANADERIA
+  COMIDA_RAPIDA
+  OTRO
+}
+
 model Reservation {
   id               String            @id @default(uuid())
   verificationCode String            @unique
@@ -113,6 +121,7 @@ model Branch {
   city         String   @default("")
   phone        String?
   openingHours String?
+  businessType BusinessType
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

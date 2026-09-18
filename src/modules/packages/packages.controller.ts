@@ -134,6 +134,22 @@ export class PackagesController {
     return this.packagesService.reserve(id, clientId, dto.paymentMethod);
   }
 
+  @Patch(':id/cancel')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.BUSINESS)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cancel a package owned by the authenticated business (soft delete)' })
+  @ApiResponse({ status: 200, description: 'Package cancelled successfully' })
+  @ApiResponse({ status: 403, description: 'Package belongs to another business' })
+  @ApiResponse({ status: 404, description: 'Package not found' })
+  @ApiResponse({ status: 409, description: 'Package cannot be cancelled from its current status' })
+  cancel(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') businessId: string,
+  ) {
+    return this.packagesService.cancel(id, businessId);
+  }
+
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.BUSINESS)
