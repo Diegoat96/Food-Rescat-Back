@@ -21,4 +21,11 @@ export class CustomersController {
   getStatistics(@CurrentUser('id') customerId: string) {
     return this.customersService.getStatistics(customerId);
   }
+
+  @Get('me/reservations')
+  @ApiOperation({ summary: 'List the reservation history of the authenticated customer' })
+  @ApiResponse({ status: 200, description: 'Customer reservation history returned' })
+  getReservations(@CurrentUser('id') customerId: string) {
+    return this.customersService.getReservations(customerId);
+  }
 }
