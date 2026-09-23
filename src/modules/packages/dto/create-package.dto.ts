@@ -3,6 +3,7 @@ import {
   IsInt,
   IsNumber,
   IsOptional,
+  IsPositive,
   IsString,
   IsUUID,
   Min,
@@ -22,7 +23,7 @@ export class CreatePackageDto {
 
   @ApiProperty({ example: 50.0 })
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
+  @IsPositive()
   @Type(() => Number)
   originalPrice!: number;
 
