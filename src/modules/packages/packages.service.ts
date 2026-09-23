@@ -285,9 +285,6 @@ export class PackagesService {
       try {
         return await this.prisma.$transaction(
           async (tx) => {
-            // Single-statement conditional UPDATE decrements the stock atomically.
-            // Only one of the concurrent requests can win the row lock; the others
-            // re-evaluate the predicate after it commits and affect 0 rows.
             const result = await tx.foodPackage.updateMany({
               where: {
                 id: packageId,
@@ -324,6 +321,7 @@ export class PackagesService {
                 clientId,
                 packageId,
                 branchId: foodPackage.branchId,
+                packageName: foodPackage.name,
               },
             });
           },
