@@ -321,7 +321,6 @@ export class PackagesService {
                 clientId,
                 packageId,
                 branchId: foodPackage.branchId,
-                packageName: foodPackage.name,
               },
             });
           },
