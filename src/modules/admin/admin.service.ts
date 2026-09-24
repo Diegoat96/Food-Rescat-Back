@@ -26,7 +26,6 @@ export interface UserListResponse {
 }
 
 export interface AdminStatisticsResponse {
-  kgRescuedTotal: number;
   topBranches: Array<{
     branchId: string;
     name: string;
@@ -125,25 +124,6 @@ export class AdminService {
   }
 
   async getStatistics(): Promise<AdminStatisticsResponse> {
-    // kgRescuedTotal: sum of estimatedWeightKg for every COMPLETED reservation.
-    // estimatedWeightKg lives on FoodPackage (a relation of Reservation), and
-    // Prisma's aggregate only works on scalar fields of the queried model, so
-    // the equivalent cannot be expressed with one aggregate() call. We use
-    // findMany + include + in-memory reduce, the same pattern already used by
-    // CustomersService and BusinessesService. No raw SQL.
-    const completedReservations = await this.prisma.reservation.findMany({
-      where: { status: ReservationStatus.COMPLETED },
-      select: {
-        package: { select: { estimatedWeightKg: true } },
-      },
-    });
-
-    const kgRescuedTotal =
-      completedReservations.reduce(
-        (sum, r) => sum + Number(r.package.estimatedWeightKg),
-        0,
-      );
-
     // topBranches: groupBy is a perfect fit — count COMPLETED reservations
     // grouped by branchId, ordered desc and truncated to 5 by the DB.
     const topRaw = await this.prisma.reservation.groupBy({
@@ -181,7 +161,6 @@ export class AdminService {
     }));
 
     return {
-      kgRescuedTotal: Math.round(kgRescuedTotal * 100) / 100,
       topBranches,
       packagesByStatus,
     };

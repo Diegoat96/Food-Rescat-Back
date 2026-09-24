@@ -160,4 +160,31 @@ export class ReservationsService {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+  async findByClient(clientId: string) {
+    return this.prisma.reservation.findMany({
+      where: { clientId },
+      include: {
+        package: {
+          select: {
+            id: true,
+            name: true,
+            imageUrl: true,
+            discountedPrice: true,
+            originalPrice: true,
+            pickupDeadline: true,
+          },
+        },
+        branch: {
+          select: {
+            id: true,
+            name: true,
+            city: true,
+            address: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 }
