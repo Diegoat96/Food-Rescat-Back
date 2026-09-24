@@ -4,7 +4,6 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 export interface CustomerStatistics {
   totalRescues: number;
-  kgSaved: number;
   totalSaved: number;
 }
 
@@ -21,7 +20,6 @@ export class CustomersService {
       include: {
         package: {
           select: {
-            estimatedWeightKg: true,
             originalPrice: true,
             discountedPrice: true,
           },
@@ -30,12 +28,10 @@ export class CustomersService {
     });
 
     let totalRescues = 0;
-    let kgSaved = 0;
     let totalSaved = 0;
 
     for (const reservation of reservations) {
       totalRescues += 1;
-      kgSaved += Number(reservation.package.estimatedWeightKg);
       totalSaved +=
         Number(reservation.package.originalPrice) -
         Number(reservation.package.discountedPrice);
@@ -43,7 +39,6 @@ export class CustomersService {
 
     return {
       totalRescues,
-      kgSaved: Math.round(kgSaved * 100) / 100,
       totalSaved: Math.round(totalSaved * 100) / 100,
     };
   }

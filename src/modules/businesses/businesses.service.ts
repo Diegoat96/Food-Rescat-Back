@@ -3,7 +3,6 @@ import { ReservationStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface TodayStatsResponse {
-  kgRescuedToday: number;
   ordersCompletedToday: number;
   revenueToday: number;
 }
@@ -22,7 +21,7 @@ export class BusinessesService {
     // The DB aggregates COMPLETED reservations per package, so only distinct
     // packages are transferred instead of one row per reservation. Each
     // completed reservation rescues one package unit, hence the count is
-    // multiplied by the package weight/price.
+    // multiplied by the package price.
     const completedByPackage = await this.prisma.reservation.groupBy({
       by: ['packageId'],
       where: {
@@ -44,23 +43,14 @@ export class BusinessesService {
           where: { id: { in: packageIds } },
           select: {
             id: true,
-            estimatedWeightKg: true,
             discountedPrice: true,
           },
         })
       : [];
-    const weightByPackage = new Map(
-      packages.map((p) => [p.id, Number(p.estimatedWeightKg)]),
-    );
     const priceByPackage = new Map(
       packages.map((p) => [p.id, Number(p.discountedPrice)]),
     );
 
-    const kgRescuedToday = completedByPackage.reduce(
-      (sum, row) =>
-        sum + (weightByPackage.get(row.packageId) ?? 0) * row._count._all,
-      0,
-    );
     const revenueToday = completedByPackage.reduce(
       (sum, row) =>
         sum + (priceByPackage.get(row.packageId) ?? 0) * row._count._all,
@@ -68,7 +58,6 @@ export class BusinessesService {
     );
 
     return {
-      kgRescuedToday: Number(kgRescuedToday.toFixed(2)),
       ordersCompletedToday,
       revenueToday: Number(revenueToday.toFixed(2)),
     };
