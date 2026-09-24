@@ -25,13 +25,21 @@ import { UserRole } from '../../common/enums/user-role.enum';
 
 @ApiTags('Reservations')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.BUSINESS)
 @ApiBearerAuth()
 @Controller('reservations')
 export class ReservationsController {
   constructor(private readonly reservationsService: ReservationsService) {}
 
+  @Get()
+  @Roles(UserRole.CLIENT)
+  @ApiOperation({ summary: 'List reservations of the authenticated client' })
+  @ApiResponse({ status: 200, description: 'List of client reservations returned' })
+  findMyReservations(@CurrentUser('id') clientId: string) {
+    return this.reservationsService.findByClient(clientId);
+  }
+
   @Post('verify')
+  @Roles(UserRole.BUSINESS)
   @HttpCode(200)
   @ApiOperation({
     summary:
@@ -48,6 +56,7 @@ export class ReservationsController {
   }
 
   @Patch(':id/complete')
+  @Roles(UserRole.BUSINESS)
   @ApiOperation({ summary: 'Complete a PENDING reservation (mark package PICKED_UP)' })
   @ApiResponse({ status: 200, description: 'Reservation completed' })
   @ApiResponse({ status: 403, description: 'Reservation belongs to another business' })
@@ -60,6 +69,7 @@ export class ReservationsController {
   }
 
   @Get('pending')
+  @Roles(UserRole.BUSINESS)
   @ApiOperation({ summary: 'List PENDING reservations of the authenticated business' })
   @ApiResponse({ status: 200, description: 'List of pending reservations returned' })
   findPending(@CurrentUser('id') businessId: string) {
